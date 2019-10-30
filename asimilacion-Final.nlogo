@@ -34,7 +34,7 @@ patches-own[
 ;      piece: a piece on the board of the player who is going to play
 ;      pos  : a cell available (no piece in it). From 0 to 48
 
-
+;; ------------------------ Monte Carlo ---------------------------------------
 ; Get the content of the state
 to-report MCTS:get-content [s]
   report first s
@@ -49,6 +49,43 @@ end
 to-report MCTS:create-state [c p]
   report (list c p)
 end
+
+to-report possible-movements ;[content pos]
+
+  let x 0 ;first pos
+
+  let y 0;last pos
+
+  let casillas-disponibles 0
+
+  set casillas-disponibles (list (list  (x - 1)  y) (list  (x - 2 )  y) (list  (x  + 1)  y) (list  (x  + 2)  y) (list  (x  - 1)  (y + 1) )
+    (list  (x  - 1)  (y - 1) ) (list  (x  + 1)  (y - 1) ) (list  (x  + 1) (y + 1))(list  (x  + 2)  (y + 2)) (list  (x  + 2)  (y - 2)) (list  (x  - 2)  (y + 2)) (list  (x  - 2)  (y - 2))
+   (list  x  (y - 2)) (list  x  (y - 1)) (list  x  (y + 1)) (list  x  (y + 2)))
+
+  set casillas-disponibles filter[s -> first s >= 0 and first s < 7 and last s >= 0 and last s < 7]casillas-disponibles
+  user-message casillas-disponibles
+
+
+
+end
+
+
+
+
+
+
+
+
+
+
+;; ------------------------ 2 Humanos ---------------------------------------
+
+
+
+
+
+
+
 
 
 
@@ -84,7 +121,7 @@ to setup
       set color red
       set size 0.9
     ]
-      set value 0
+      set value 2
   ]
   ask patches  with [pxcor = 6 and pycor = 0] [
     sprout-pieces 1 [
@@ -94,9 +131,31 @@ to setup
     ]
       set value 0
   ]
+end
 
+to play
+  let played? false
+  let p 1
+  let pos nobody
+  let lista 0
+  ; In the cycle, the human starts playing
+  ; Let's check if you click on a free piece
+  if mouse-down? and  ( [value] of one-of pieces-on patch mouse-xcor mouse-ycor = p)
+  [
+    set pos patch mouse-xcor mouse-ycor
+    ask  pieces-on patch mouse-xcor mouse-ycor [set color green]
+   ; set lista  possible-movements board-to-state  pos
+  ]
 
 end
+
+
+; Auxiliary report to build the representation in list from the patches
+to-report board-to-state
+  let b map [x -> [value] of x] (sort patches)
+  report b
+end
+
 
  to go ;añade una tortuga al tablero en la posicion seleccionada
   if mouse-down? [
@@ -110,7 +169,6 @@ end
      ]
     ]
  end
-;end
 @#$#@#$#@
 GRAPHICS-WINDOW
 211
@@ -161,8 +219,25 @@ BUTTON
 24
 174
 57
-Play!
+Go
 go
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+21
+144
+84
+177
+NIL
+play
 T
 1
 T
