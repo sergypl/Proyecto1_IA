@@ -7,6 +7,7 @@ pieces-own [
   id ; will mantain the type of the piece (it identifies the piece)
 ]
 
+
 ; Patches: cells of the board
 ;     0   1   2   3   4   5   6
 ;     7   8   9  10  11  12  13
