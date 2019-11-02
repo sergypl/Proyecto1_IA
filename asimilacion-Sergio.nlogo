@@ -6,7 +6,9 @@ breed [pieces piece]
 pieces-own [
   id ; will mantain the type of the piece (it identifies the piece)
 ]
-
+globals[
+   Jugador
+]
 
 ; Patches: cells of the board
 ;     0   1   2   3   4   5   6
@@ -81,6 +83,7 @@ to setup
     set pcolor ifelse-value ((pxcor + pycor) mod 2 = 0) [white] [8999]
     set value 0
   ]
+  set Jugador 1 ; Jugador blue
   ;Setup pieces
   ask patches  with [pxcor = 0 and pycor = 0] [
     sprout-pieces 1 [
@@ -112,67 +115,94 @@ to setup
       set color red
       set size 0.9
     ]
-      set value 0
+      set value 2
   ]
 end
 
 to play
-  let played? false
-  let Jugador 1
+
   let pieza nobody
   let pos nobody
   let newpos nobody
   let lista 0
+  let casillas-disponibles 0
   ; In the cycle, the human starts playing
   ; Let's check if you click on a free piece
   if mouse-down? [
-    if any? pieces-on patch mouse-xcor mouse-ycor[
+    if any? pieces-on patch mouse-xcor mouse-ycor and [value] of patch mouse-xcor mouse-ycor = Jugador [
       set pieza one-of pieces-on patch mouse-xcor mouse-ycor
       set pos patch mouse-xcor mouse-ycor
-
+      set casillas-disponibles possible-movements board-to-state pos
       while[mouse-down?][
         ask pieza [setxy mouse-xcor mouse-ycor]
       ]
+      set newpos patch mouse-xcor mouse-ycor
       ask pieza[
-        if (not any? other pieces-on patch mouse-xcor mouse-ycor) ; and (comprobar cor de mouse están en la lista de casillas disponibles)
+        ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles newpos) ; and (comprobar cor de mouse están en la lista de casillas disponibles y mover la ficha en caso contrario regresarla a su origen)
         [
           move-to patch mouse-xcor mouse-ycor
           set value Jugador
           set newpos patch mouse-xcor mouse-ycor
+          ifelse ((distancia  pos newpos) = 1 )[ ; si la distancia de la nueva posición es mayor que 1 solo mueve la pieza si es 1 la duplica.
+             ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [
+              sprout-pieces 1 [
+                set shape "circle"
+                set value Jugador
+                ifelse Jugador = 1[
+                  set color blue
+                  set Jugador 2
+                ][
+                  set color red
+                  set Jugador 1
+                ]
+                set size 0.9
+              ]
+            ]
+          ][
+            ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [set value 0]
+            ask patches  with [pxcor = [pxcor] of newpos and pycor = [pycor] of newpos ] [set value Jugador]
+            ifelse Jugador = 1[
+                  set Jugador 2
+                ][
+                  set Jugador 1
+                ]
+          ]
+        ][
+          move-to patch [pxcor] of pos  [pycor] of pos
         ]
-      ]
-     ask patches  with [pxcor = (first pos)  and pycor = (last pos) ] [
-        sprout-pieces 1 [
-          set shape "circle"
-          set color blue
-          set size 0.9
-        ]
-       set value 1
       ]
     ]
-
   ]
 
 end
 
 to-report possible-movements [content pos]
 
-  let x first pos
-  let y  last pos
+  let x   [pxcor] of pos
+  let y  [pycor] of pos
   let casillas-disponibles 0
 
   set casillas-disponibles (list (list  (x - 1)  y) (list  (x - 2 )  y) (list  (x  + 1)  y) (list  (x  + 2)  y) (list  (x  - 1)  (y + 1) )
     (list  (x  - 1)  (y - 1) ) (list  (x  + 1)  (y - 1) ) (list  (x  + 1) (y + 1))(list  (x  + 2)  (y + 2)) (list  (x  + 2)  (y - 2)) (list  (x  - 2)  (y + 2)) (list  (x  - 2)  (y - 2))
    (list  x  (y - 2)) (list  x  (y - 1)) (list  x  (y + 1)) (list  x  (y + 2)))
 
+
   set casillas-disponibles filter[s -> first s >= 0 and first s < 7 and last s >= 0 and last s < 7]casillas-disponibles
   ; user-message casillas-disponibles
   report casillas-disponibles
 end
 
-to-report movement-valid? [casillas-disponibles pos]
+to-report movement-valid? [casillas-disponibles newpos]
+  let p (list ([pxcor] of newpos) ([pycor] of newpos))
+  foreach casillas-disponibles [c -> if (p = c)[report true]]
+  report false
 
+end
 
+to-report distancia [pos newpos]
+ let res 0
+  set res max(list (abs([pxcor] of newpos - [pxcor] of pos)) (abs([pycor] of newpos - [pycor] of pos)))
+ report  res
 end
 
 ; Auxiliary report to build the representation in list from the patches
@@ -180,20 +210,6 @@ to-report board-to-state
   let b map [x -> [value] of x] (sort patches)
   report b
 end
-
-
- to go ;añade una tortuga al tablero en la posicion seleccionada
-  if mouse-down? [
-    ask patch mouse-xcor mouse-ycor[
-      sprout-pieces 1 [
-        set shape "circle"
-        set color red
-        set size 0.9
-      ]
-      set value 1
-     ]
-    ]
- end
 @#$#@#$#@
 GRAPHICS-WINDOW
 211
@@ -230,23 +246,6 @@ BUTTON
 New Game
 setup\n
 NIL
-1
-T
-OBSERVER
-NIL
-NIL
-NIL
-NIL
-1
-
-BUTTON
-111
-24
-174
-57
-Play!
-go
-T
 1
 T
 OBSERVER
