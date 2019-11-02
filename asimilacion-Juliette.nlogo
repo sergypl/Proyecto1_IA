@@ -172,7 +172,7 @@ to play
           move-to patch [pxcor] of pos  [pycor] of pos
         ]
       ]
-      let casillas-alrededor possible-movements board-to-state newpos
+    let casillas-alrededor possible-movements board-to-state newpos
     foreach casillas-alrededor [c -> if (distancia (patch first c last c) newpos = 1)[ ; por todas las casillas a distancia 1 de newpos
       ask turtles with [pxcor = first c and pycor = last c ] [
         ifelse Jugador = 1 [  ; cambiar color y value
@@ -627,7 +627,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.0
+NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
