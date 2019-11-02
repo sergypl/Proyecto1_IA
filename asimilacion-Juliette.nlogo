@@ -138,7 +138,7 @@ to play
       ]
       set newpos patch mouse-xcor mouse-ycor
       ask pieza[
-        ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles newpos) ; and (comprobar cor de mouse están en la lista de casillas disponibles y mover la ficha en caso contrario regresarla a su origen)
+        ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles newpos) and [value] of patch mouse-xcor mouse-ycor != 1;( comprobar cor de mouse están en la lista de casillas disponibles y si esta basilla y mover la ficha en caso contrario regresarla a su origen)
         [
           move-to patch mouse-xcor mouse-ycor
           set value Jugador
@@ -167,19 +167,33 @@ to play
                   set Jugador 1
                 ]
           ]
-        ][
+        ]
+        [
           move-to patch [pxcor] of pos  [pycor] of pos
         ]
       ]
+      let casillas-alrededor possible-movements board-to-state newpos
+    foreach casillas-alrededor [c -> if (distancia (patch first c last c) newpos = 1)[ ; por todas las casillas a distancia 1 de newpos
+      ask turtles with [pxcor = first c and pycor = last c ] [
+        ifelse Jugador = 1 [  ; cambiar color y value
+          set color red
+          set value 2
+        ]
+        [
+          set color blue
+          set value 1
+        ]
+      ]
+        ]
+    ]
     ]
   ]
 
 end
 
 to-report possible-movements [content pos]
-
-  let x   [pxcor] of pos
-  let y  [pycor] of pos
+  let x [pxcor] of pos
+  let y [pycor] of pos
   let casillas-disponibles 0
 
   set casillas-disponibles (list (list  (x - 1)  y) (list  (x - 2 )  y) (list  (x  + 1)  y) (list  (x  + 2)  y) (list  (x  - 1)  (y + 1) )
@@ -188,7 +202,6 @@ to-report possible-movements [content pos]
 
 
   set casillas-disponibles filter[s -> first s >= 0 and first s < 7 and last s >= 0 and last s < 7]casillas-disponibles
-  ; user-message casillas-disponibles
   report casillas-disponibles
 end
 
@@ -201,7 +214,7 @@ end
 
 to-report distancia [pos newpos]
  let res 0
-  set res max(list (abs([pxcor] of newpos - [pxcor] of pos)) (abs([pycor] of newpos - [pycor] of pos)))
+ set res max(list (abs([pxcor] of newpos - [pxcor] of pos)) (abs([pycor] of newpos - [pycor] of pos)))
  report  res
 end
 
@@ -614,7 +627,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.1
+NetLogo 6.1.0
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
