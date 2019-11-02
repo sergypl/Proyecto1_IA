@@ -141,7 +141,7 @@ to play
           set newpos patch mouse-xcor mouse-ycor
         ]
       ]
-     ask patches  with [pxcor = (first pos)  and pycor = (last pos) ] [
+     ask patches  with [pxcor = ()  and pycor = (0) ] [
         sprout-pieces 1 [
           set shape "circle"
           set color blue
