@@ -7,7 +7,7 @@ pieces-own [
   id ; will mantain the type of the piece (it identifies the piece)
 ]
 globals[
-   Jugador
+  Jugador
 ]
 
 ; Patches: cells of the board
@@ -84,14 +84,14 @@ to setup
     set value 0
   ]
   set Jugador 1 ; Jugador blue
-  ;Setup pieces
+                ;Setup pieces
   ask patches  with [pxcor = 0 and pycor = 0] [
     sprout-pieces 1 [
       set shape "circle"
       set color blue
       set size 0.9
     ]
-      set value 1
+    set value 1
   ]
   ask patches  with [pxcor = 6 and pycor = 6] [
     sprout-pieces 1 [
@@ -99,7 +99,7 @@ to setup
       set color blue
       set size 0.9
     ]
-      set value 1
+    set value 1
   ]
   ask patches  with [pxcor = 0 and pycor = 6] [
     sprout-pieces 1 [
@@ -107,7 +107,7 @@ to setup
       set color red
       set size 0.9
     ]
-      set value 2
+    set value 2
   ]
   ask patches  with [pxcor = 6 and pycor = 0] [
     sprout-pieces 1 [
@@ -115,7 +115,7 @@ to setup
       set color red
       set size 0.9
     ]
-      set value 2
+    set value 2
   ]
 end
 
@@ -128,77 +128,80 @@ to play
   let casillas-disponibles 0
   ; In the cycle, the human starts playing
   ; Let's check if you click on a free piece
-  if mouse-down? [
-    if any? pieces-on patch mouse-xcor mouse-ycor and [value] of patch mouse-xcor mouse-ycor = Jugador [
-      set pieza one-of pieces-on patch mouse-xcor mouse-ycor
-      set pos patch mouse-xcor mouse-ycor
-      set casillas-disponibles possible-movements board-to-state pos
-      while[mouse-down?][
-        ask pieza [setxy mouse-xcor mouse-ycor]
-      ]
-      set newpos patch mouse-xcor mouse-ycor
-      ask pieza[
-        ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles newpos) and [value] of patch mouse-xcor mouse-ycor != 1;( comprobar cor de mouse están en la lista de casillas disponibles y si esta basilla y mover la ficha en caso contrario regresarla a su origen)
-        [
-          move-to patch mouse-xcor mouse-ycor
-          set value Jugador
-          set newpos patch mouse-xcor mouse-ycor
-          ifelse ((distancia  pos newpos) = 1 )[ ; si la distancia de la nueva posición es mayor que 1 solo mueve la pieza si es 1 la duplica.
-             ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [
-              sprout-pieces 1 [
-                set shape "circle"
-                set value Jugador
-                ifelse Jugador = 1[
-                  set color blue
-                  set Jugador 2
-                ][
-                  set color red
-                  set Jugador 1
+  if (final-state board-to-state = false)[
+    if mouse-down? [
+      if any? pieces-on patch mouse-xcor mouse-ycor and [value] of patch mouse-xcor mouse-ycor = Jugador [ ; si hay una pieza en el patch que pinchamos y pertenece al jugador que le toca mover
+        set pieza one-of pieces-on patch mouse-xcor mouse-ycor
+        set pos patch mouse-xcor mouse-ycor
+        set casillas-disponibles possible-movements  pos
+        while[mouse-down?][
+          ask pieza [setxy mouse-xcor mouse-ycor]
+        ]
+        set newpos patch mouse-xcor mouse-ycor
+        ask pieza[
+          ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles newpos) and [value] of patch mouse-xcor mouse-ycor = 0;( comprobar cor de mouse están en la lista de casillas disponibles y si esta basilla y mover la ficha en caso contrario regresarla a su origen)
+          [
+            move-to patch mouse-xcor mouse-ycor
+            set value Jugador
+            set newpos patch mouse-xcor mouse-ycor
+            ifelse ((distancia  pos newpos) = 1 )[ ; si la distancia de la nueva posición es mayor que 1 solo mueve la pieza si es 1 la duplica.
+              ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [
+                sprout-pieces 1 [
+                  set shape "circle"
+                  set value Jugador
+                  ifelse Jugador = 1[
+                    set color blue
+                    set Jugador 2
+                  ][
+                    set color red
+                    set Jugador 1
+                  ]
+                  set size 0.9
                 ]
-                set size 0.9
+              ]
+            ][
+              ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [set value 0]
+              ask patches  with [pxcor = [pxcor] of newpos and pycor = [pycor] of newpos ] [set value Jugador]
+              ifelse Jugador = 1[
+                set Jugador 2
+              ][
+                set Jugador 1
               ]
             ]
-          ][
-            ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [set value 0]
-            ask patches  with [pxcor = [pxcor] of newpos and pycor = [pycor] of newpos ] [set value Jugador]
-            ifelse Jugador = 1[
-                  set Jugador 2
-                ][
-                  set Jugador 1
+            let casillas-alrededor possible-movements newpos
+            foreach casillas-alrededor [c -> if (distancia (patch first c last c) newpos = 1)[ ; para todas las casillas a distancia 1 de newpos
+              ask turtles with [pxcor = first c and pycor = last c ] [
+                ifelse Jugador = 1 [  ; cambiar color y value
+                  set color red
+                  set value 2
                 ]
+                [
+                  set color blue
+                  set value 1
+                ]
+              ]
+              ]
+
+            ]
+
+          ]
+          [
+            move-to patch [pxcor] of pos  [pycor] of pos
           ]
         ]
-        [
-          move-to patch [pxcor] of pos  [pycor] of pos
-        ]
       ]
-    let casillas-alrededor possible-movements board-to-state newpos
-    foreach casillas-alrededor [c -> if (distancia (patch first c last c) newpos = 1)[ ; por todas las casillas a distancia 1 de newpos
-      ask turtles with [pxcor = first c and pycor = last c ] [
-        ifelse Jugador = 1 [  ; cambiar color y value
-          set color red
-          set value 2
-        ]
-        [
-          set color blue
-          set value 1
-        ]
-      ]
-        ]
-    ]
     ]
   ]
-
 end
 
-to-report possible-movements [content pos]
+to-report possible-movements [pos]
   let x [pxcor] of pos
   let y [pycor] of pos
   let casillas-disponibles 0
 
   set casillas-disponibles (list (list  (x - 1)  y) (list  (x - 2 )  y) (list  (x  + 1)  y) (list  (x  + 2)  y) (list  (x  - 1)  (y + 1) )
     (list  (x  - 1)  (y - 1) ) (list  (x  + 1)  (y - 1) ) (list  (x  + 1) (y + 1))(list  (x  + 2)  (y + 2)) (list  (x  + 2)  (y - 2)) (list  (x  - 2)  (y + 2)) (list  (x  - 2)  (y - 2))
-   (list  x  (y - 2)) (list  x  (y - 1)) (list  x  (y + 1)) (list  x  (y + 2)))
+    (list  x  (y - 2)) (list  x  (y - 1)) (list  x  (y + 1)) (list  x  (y + 2)))
 
 
   set casillas-disponibles filter[s -> first s >= 0 and first s < 7 and last s >= 0 and last s < 7]casillas-disponibles
@@ -213,9 +216,41 @@ to-report movement-valid? [casillas-disponibles newpos]
 end
 
 to-report distancia [pos newpos]
- let res 0
- set res max(list (abs([pxcor] of newpos - [pxcor] of pos)) (abs([pycor] of newpos - [pycor] of pos)))
- report  res
+  let res 0
+  set res max(list (abs([pxcor] of newpos - [pxcor] of pos)) (abs([pycor] of newpos - [pycor] of pos)))
+  report  res
+end
+
+to-report final-state [content]
+  ;let posiciones-tablero [42 43 44 45 46 47 48 35 36 37 38 39 40 41 28 29 30 31 32 33 34 21 22 23 24 25 26 27 14 15 16 17 18 19 20 7 8 9 10 11 12 13 0 1 2 3 4 5 6]
+  let posiciones-tablero (range 49 0); mirar estooooooooo muy profundamente
+  let fichas1 0
+  let fichas2 0
+  ;show posiciones-tablero
+
+  ;comprobamos si hay movimientos posibles del jugador que esta jugando  y si hay, seguimos jugando
+  ; miramos en cada posicion de la lista del tablero cuyo valor es 0-1-2 , solo en las que pertenecen al jugador que esta jugando y ademas si es vacío el numero de casillas posibles
+  ;a las que el jugador se puede mover (posiblle movements) y cuyo valor es vacío(filter(se nos olvidó poner la comprobacion de si es vacía en la funcion y por eso se ha hecho el filter aquí))
+  foreach posiciones-tablero [i -> if (item i content = Jugador) and ((empty?  filter [s -> [value] of patch (first s) (last s) = 0] possible-movements patch  (i / 7)  (i mod 7)) = false)[ report false]]
+  ;si llegamos aqui es porque no hay movimientos posibles, entonces comprobamos si es porque el tablero esta lleno en cuyo caso procedemos a contar el numero de fichas de cada jugador
+  user-message "Mierda"
+  set fichas1 count patches with [value = 1]
+  set fichas2 count patches with [value = 2]
+  ifelse(fichas1 + fichas2 = 49)[
+    ifelse (fichas1 > fichas2)[
+      user-message "Jugador-1 ha ganado y Jugador-2 paga un kebab al creador del juego"
+      report true
+    ]
+    [
+      user-message "Jugador-2 ha ganado y Jugador-1 paga 50 cervezas al creador del juego"
+      report true
+    ]
+  ] ;por ultimo si llegamos aqui es porque no hay movimientos posibles pero el tablero no esta completo, por lo que tenemos que ver qué jugador no puede realizar ningun movimiento ya que será el perdedor.
+  [
+    user-message   word "Jugador-" word Jugador " ha perdido"
+    report true
+  ]
+
 end
 
 ; Auxiliary report to build the representation in list from the patches
@@ -226,9 +261,9 @@ end
 @#$#@#$#@
 GRAPHICS-WINDOW
 211
-10
+18
 519
-319
+327
 -1
 -1
 42.857142857142854
@@ -269,11 +304,11 @@ NIL
 1
 
 BUTTON
-47
-103
-110
-136
-NIL
+29
+80
+129
+113
+2 Jugadores
 play
 T
 1
