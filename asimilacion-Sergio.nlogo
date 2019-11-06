@@ -36,7 +36,8 @@ patches-own[
 ;      piece: a piece on the board of the player who is going to play
 ;      pos  : a cell available (no piece in it). From 0 to 48
 
-;; ------------------------ Monte Carlo ---------------------------------------
+
+;; ------------------------ Monte Carlo(Jugador Automático) ---------------------------------------
 ; Get the content of the state
 to-report MCTS:get-content [s]
   report first s
@@ -52,6 +53,11 @@ to-report MCTS:create-state [c p]
   report (list c p)
 end
 
+to-report MCTS:get-rules[s]
+
+
+
+end
 
 
 
@@ -63,7 +69,7 @@ end
 
 
 
-;; ------------------------ 2 Humanos ---------------------------------------
+
 
 
 
@@ -118,7 +124,7 @@ to setup
     set value 2
   ]
 end
-
+; ------------------------ 2 Humanos ---------------------------------------
 to play
 
   let pieza nobody
@@ -144,7 +150,7 @@ to play
             move-to patch mouse-xcor mouse-ycor
             set value Jugador
             set newpos patch mouse-xcor mouse-ycor
-            ifelse ((distancia  pos newpos) = 1 )[ ; si la distancia de la nueva posición es mayor que 1 solo mueve la pieza si es 1 la duplica.
+            ifelse ((distancia  pos newpos) = 1 )[ ; si la distancia de la nueva posición es mayor que 1 solo mueve la pieza si es igual a  1 la duplica.
               ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [
                 sprout-pieces 1 [
                   set shape "circle"
@@ -222,18 +228,24 @@ to-report distancia [pos newpos]
 end
 
 to-report final-state [content]
-  ;let posiciones-tablero [42 43 44 45 46 47 48 35 36 37 38 39 40 41 28 29 30 31 32 33 34 21 22 23 24 25 26 27 14 15 16 17 18 19 20 7 8 9 10 11 12 13 0 1 2 3 4 5 6]
-  let posiciones-tablero (range 49 0); mirar estooooooooo muy profundamente
+
   let fichas1 0
   let fichas2 0
-  ;show posiciones-tablero
+  let empty true
 
   ;comprobamos si hay movimientos posibles del jugador que esta jugando  y si hay, seguimos jugando
-  ; miramos en cada posicion de la lista del tablero cuyo valor es 0-1-2 , solo en las que pertenecen al jugador que esta jugando y ademas si es vacío el numero de casillas posibles
-  ;a las que el jugador se puede mover (posiblle movements) y cuyo valor es vacío(filter(se nos olvidó poner la comprobacion de si es vacía en la funcion y por eso se ha hecho el filter aquí))
-  foreach posiciones-tablero [i -> if (item i content = Jugador) and ((empty?  filter [s -> [value] of patch (first s) (last s) = 0] possible-movements patch  (i / 7)  (i mod 7)) = false)[ report false]]
+  ; miramos cada patch  cuyo valor es el valor del jugador que está jugando y además, si es vacío el numero de casillas posibles a  las que el jugador se puede mover (posiblle movements)
+  ; y cuyo valor es vacío(filter(se nos olvidó poner la comprobacion de si es vacía en la funcion(possible-movements) y por eso se ha hecho el filter aquí))
+
+  ask patches with [value = Jugador][  ; por todos los piezas del jugador que esta jugando
+    if ( empty? filter [s -> [value] of patch first s last s = 0] possible-movements patch pxcor pycor = false ) ; si puede mover unas de sus piezas
+    [
+      set empty false  ; set empty a false
+    ]
+  ]
+  if empty = false [report false]  ; si empty es false, es decir que el jugador puede hacer un movimento y que entonces la partida puede seguir
+
   ;si llegamos aqui es porque no hay movimientos posibles, entonces comprobamos si es porque el tablero esta lleno en cuyo caso procedemos a contar el numero de fichas de cada jugador
-  user-message "Mierda"
   set fichas1 count patches with [value = 1]
   set fichas2 count patches with [value = 2]
   ifelse(fichas1 + fichas2 = 49)[
