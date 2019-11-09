@@ -64,34 +64,75 @@ end
 ; Get the rules applicable to the state
 to-report MCTS:get-rules [s]
   let lista (list)
-  ; ask patches with [value = Jugador][  ; por todos los piezas del jugador que esta jugando
-  ;  set lista lput (list (list patch pxcor pycor) (list filter [c -> [value] of patch first c last c = 0] possible-movements patch pxcor pycor )) lista
-  ;]
-  ; ask patches with [value = Jugador][
-  ; foreach times (list pxcor pycor) filter [c -> [value] of patch first c last c = 0] possible-movements patch pxcor pycor
+  let matrix first s
+  let jug last s
+  let jugador-que-va-a-jugar 1
+  let filas 0
+  let columnas 0
 
-  ; [ elt -> set lista lput elt lista
-  ; ]
-  ;]
+  if jug = 1[set jugador-que-va-a-jugar 2]
+
+  foreach matrix [
+    i -> foreach i [
+      j ->
+      if (j = jugador-que-va-a-jugar) ; por todas las casillas del jugador que va a jugar
+      [
+        foreach times (list filas columnas) possible-movements matrix filas columnas [p -> set lista lput p lista]  ; anadir los movimientos possible donde un movimiento es [px py nx ny]
+      ]
+      set columnas (columnas + 1)] set columnas 0 set filas (filas + 1)
+  ]
+
   report lista
+end
+
+to-report sustituir-ficha [linea pos matrix]
+  let new-matrix (list)
+  let count-linea 0
+  foreach matrix [
+    l ->
+    ifelse (pos != count-linea)
+    [set new-matrix lput l new-matrix]
+    [set new-matrix lput linea new-matrix]
+    set count-linea (count-linea + 1)
+  ]
+  report new-matrix
+end
+
+to-report cambiar-estado [r matrix jug]
+  let px item 0 r
+  let py item 1 r
+  let nx item 2 r
+  let ny item 3 r
+
+  let dist distancia px py nx ny
+  let new-matrix sustituir-ficha (replace-item ny (item nx matrix) jug) nx matrix ; poner la nueva pieza en su nueva posicion
+                                                                                  ; replace
+  if dist = 2
+  [  ; si distancia = 2 ,solo movemos la ficha a la nueva casilla
+    set new-matrix sustituir-ficha (replace-item py (item px matrix) 0) px new-matrix
+  ]
+  report new-matrix
 end
 
 ; Apply the rule r to the state s
 to-report MCTS:apply [r s]
+  let matrix first s
+  let jug last s
 
+  let content cambiar-estado r matrix (3 - jug)
+
+  report MCTS:create-state content (3 - jug)
 end
 
 ; Move the result from the last state to the current one
 to-report MCTS:get-result [s p]
-  if final-state board-to-state = 1[
+  if final-state s = 1[
     report 1
   ]
-  if final-state board-to-state = 2[
+  if final-state s = 2[
     report 0
   ]
-  if final-state board-to-state = 0[
-    report 0.5
-  ]
+  report false
 end
 
 
@@ -143,9 +184,6 @@ to change-patch-color [px py jug]
   ]
 end
 
-to matrix-to-board [s]
-  ; foreach state [line -> foreach []]
-end
 
 ; Start procedure. Prepares the board
 to setup
@@ -163,9 +201,81 @@ to setup
 
 end
 
+to cambiar-colores-alrededor [px py jug]
+  let x px
+  let y py
+  let casillas-alrededor (list (list  (x - 1)  y) (list  (x - 2 )  y) (list  (x  + 1)  y) (list  (x  + 2)  y) (list  (x  - 1)  (y + 1) )
+    (list  (x  - 1)  (y - 1) ) (list  (x  + 1)  (y - 1) ) (list  (x  + 1) (y + 1))(list  (x  + 2)  (y + 2)) (list  (x  + 2)  (y - 2)) (list  (x  - 2)  (y + 2)) (list  (x  - 2)  (y - 2))
+    (list  x  (y - 2)) (list  x  (y - 1)) (list  x  (y + 1)) (list  x  (y + 2)))
+
+  set casillas-alrededor filter[s -> first s >= 0 and first s < 7 and last s >= 0 and last s < 7 ]casillas-alrededor
+
+  foreach casillas-alrededor [c -> if (distancia first c last c px py = 1)[ ; por todas las casillas a distancia 1 de newpos
+    ask pieces with [pxcor = first c and pycor = last c ] [
+      ifelse jug = 1 [  ; cambiar color y value
+        set color blue
+        set value 1
+      ]
+      [
+        set color red
+        set value 2
+      ]
+    ]
+    ]
+  ]
+end
 
 to play-con-robot
-
+  ; let played? false
+  let pieza nobody
+  let oldpos nobody
+  let newpos nobody
+  let casillas-disponibles 0
+  ;si jugador pulsa en un patch
+  if mouse-down? [
+    ; y si donde ha pinchado hay una pieza y cuyo valor del patch donde esta la pieza es igual al jugador
+    if any? pieces-on patch mouse-xcor mouse-ycor and [value] of patch mouse-xcor mouse-ycor = Jugador [
+      ;asignamos a pieza la pieza que hay en el patch
+      set pieza one-of pieces-on patch mouse-xcor mouse-ycor
+      ;asignamos a la variable oldpos las coordenadas donde el jugador a pinchado
+      set oldpos patch mouse-xcor mouse-ycor
+      ;almacenamos en casillas-disponibles los posibles movimientos que puede hacer con esa ficha
+      set casillas-disponibles possible-movements board-to-state [pxcor] of oldpos [pycor] of oldpos
+      ;mientras el raton este pulsado arrastra la pieza con el
+      while[mouse-down?][
+        ask pieza [setxy mouse-xcor mouse-ycor]
+      ]
+      ;una vez ha soltado el la pieza almacenamos las coordenadas de donde la haya soltado en newpos
+      set newpos patch mouse-xcor mouse-ycor
+      ask pieza[;comprobar cor de mouse están en la lista de casillas disponibles y si esta vacía, mover la ficha. En caso contrario regresarla a su origen
+        ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles [pxcor] of newpos [pycor] of newpos)
+        [ ;en caso de que se cumpla todo lo anterior movemos la ficha a la nueva posicion
+          move-to patch mouse-xcor mouse-ycor
+          ;cambiamos el valor del patch por el del jugador
+          set value 1
+          ;y en la variable newpos almacenamos el valor de la nueva posicion
+          set newpos patch mouse-xcor mouse-ycor
+          ;si la distancia de la nueva posición es mayor que 1, solo mueve la pieza. Si es igual a 1 la duplica.
+          ifelse ((distancia  [pxcor] of oldpos [pycor] of oldpos [pxcor] of newpos [pycor] of newpos) = 1 )[
+            ;creamos la pieza en la antigua posicion porque a la nueva ya la hemos movido
+            change-patch-color [pxcor] of oldpos [pycor] of oldpos 1
+          ][; si la distancia es 2 cambiamos el valor de los patches, es decir el patch con oldpos le ponemos el valor a 0
+            ask patches  with [pxcor = [pxcor] of oldpos and pycor = [pycor] of oldpos ] [set value 0]
+          ];cambiamos el color de las piezas que estan a distancia 1 de newpos
+          cambiar-colores-alrededor [pxcor] of newpos [pycor] of newpos 1
+        ][;movemos la ficha a la posicion inicial
+          move-to patch [pxcor] of oldpos  [pycor] of oldpos
+        ]
+      ]
+    ]
+    ;esperamos que el raton suelte la pieza correctamente
+    wait .1
+    ;hasta aqui
+    if MCTS:get-result (list (board-to-state) 1) 1 = 1 [
+      user-message "You win!!!"
+      stop
+    ]
+  ]
 end
 
 
@@ -180,8 +290,6 @@ to-report possible-movements [matrix px py]
 
   let casillas-vacias (list)
   foreach casillas-disponibles [s ->
-    ;show item (first s) matrix
-    ;show (item (last s) (item (first s) matrix))
     if ((item (last s) (item (first s) matrix)) = 0) [
       set casillas-vacias lput s casillas-vacias
     ]
@@ -213,30 +321,11 @@ to-report final-state [estado]
 
   let filas 0
   let columnas 0
+  ;Comprobamos si el jugador tiene algun movimiento posible , si es cierto no es un estado final(report false)  pero si no tiene movimiento comprobamos que tipo de estado final es; tablero completo o jugador bloqueado
+  foreach matrix [i -> foreach i [j -> if (j = jugador-que-va-a-jugar) [if (not empty? possible-movements matrix filas columnas) [report false]] set columnas (columnas + 1)] set columnas 0 set filas (filas + 1)]
 
-  foreach matrix [i -> foreach i [j -> if (j = jugador-que-va-a-jugar) [ifelse (not empty? possible-movements matrix filas columnas) [report false][ show "bueno"]] set columnas (columnas + 1)] set columnas 0 set filas (filas + 1)]
-  ;hasta aqui funciona
-
-
-  show "lkjh"
-  foreach matrix [i ->
-    foreach i [
-      j ->
-      show (item i matrix)
-      show item j (item i matrix)
-      if (item j (item i matrix) = 1)
-      [
-        set fichas1 ( fichas1 + 1 )
-      ]
-      if (item j (item i matrix) = 2)
-      [
-        set fichas2 ( fichas2 + 1 )
-      ]
-      set columnas (columnas + 1)
-    ]
-    set filas (filas + 1) set columnas 0 ] ; contamos las fichas de los jugadores
-
-  ifelse (fichas1 + fichas2 = 49)[
+  foreach matrix [i -> foreach i [j -> if j = 1 [set fichas1 ( fichas1 + 1 )] if ( j = 2)[set fichas2 (fichas2 + 1 )]]] ; contamos las fichas de los jugadores
+  ifelse (fichas1 + fichas2 = 49)[;si el tablero es completo
     ifelse (fichas1 > fichas2)[
       report 1 ; jugador 1 es el ganador
     ]
@@ -246,15 +335,21 @@ to-report final-state [estado]
   ]
   ;si el tablero no esta completo
   [
-    report jug ; el que ha ganado
+    report jug ; report el jugador ganador
   ]
 
 end
 
 ; Auxiliary report to build the representation in list from the patches
 to-report board-to-state
-  let b map [x -> [value] of x] (sort patches)
-  report b
+  let l0 map [x -> [value] of x] (sort patches with [pycor = 6])
+  let l1 map [x -> [value] of x] (sort patches with [pycor = 5])
+  let l2 map [x -> [value] of x] (sort patches with [pycor = 4])
+  let l3 map [x -> [value] of x] (sort patches with [pycor = 3])
+  let l4 map [x -> [value] of x] (sort patches with [pycor = 2])
+  let l5 map [x -> [value] of x] (sort patches with [pycor = 1])
+  let l6 map [x -> [value] of x] (sort patches with [pycor = 0])
+  report (list l0 l1 l2 l3 l4 l5 l6)
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
@@ -677,7 +772,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.1.0
+NetLogo 6.1.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
