@@ -382,6 +382,7 @@ to-report movement-valid? [casillas-disponibles newpos]
 
 end
 
+
 to-report distancia [pos newpos]
   let res 0
   set res max(list (abs([pxcor] of newpos - [pxcor] of pos)) (abs([pycor] of newpos - [pycor] of pos)))
@@ -430,12 +431,25 @@ to-report board-to-state
   let b map [x -> [value] of x] (sort patches)
   report b
 end
+to-report coord-to-pos [a b]
+   let x 7 * a + b
+  report x
+end
+
+to-report  pos-to-coord [a]
+
+   let c floor (a / 7)
+  let d (a mod 7)
+
+  report sentence d c
+
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-211
-10
-519
-319
+236
+100
+544
+409
 -1
 -1
 42.857142857142854
@@ -450,8 +464,8 @@ GRAPHICS-WINDOW
 1
 0
 6
+-6
 0
-6
 0
 0
 1
