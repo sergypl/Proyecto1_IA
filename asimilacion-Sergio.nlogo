@@ -1,5 +1,7 @@
 __includes ["MCTS.nls"]
 
+extensions [matrix]
+
 ; Pieces of the game
 breed [pieces piece]
 
@@ -65,64 +67,18 @@ to-report MCTS:get-rules [s]
   ; ask patches with [value = Jugador][  ; por todos los piezas del jugador que esta jugando
   ;  set lista lput (list (list patch pxcor pycor) (list filter [c -> [value] of patch first c last c = 0] possible-movements patch pxcor pycor )) lista
   ;]
-  ask patches with [value = Jugador][
-    foreach times (list pxcor pycor) filter [c -> [value] of patch first c last c = 0] possible-movements patch pxcor pycor
+  ; ask patches with [value = Jugador][
+  ; foreach times (list pxcor pycor) filter [c -> [value] of patch first c last c = 0] possible-movements patch pxcor pycor
 
-    [ elt -> set lista lput elt lista
-    ]
-  ]
+  ; [ elt -> set lista lput elt lista
+  ; ]
+  ;]
   report lista
 end
 
 ; Apply the rule r to the state s
 to-report MCTS:apply [r s]
-  let posx first r
-  let posy item 1 r
-  let newposx item 2 r
-  let newposy item 3 r
-  let dist distancia patch posx posy patch newposx newposy
 
-  ifelse dist = 1
-  [ ; si la distancia de la nueva posición es mayor que 1 solo mueve la pieza si es 1 la duplica.
-    ask patches  with [pxcor = newposx and pycor = newposy ] [
-      sprout-pieces 1 [
-        set shape "circle"
-        set value Jugador
-        ifelse Jugador = 1[
-          set color blue
-          set Jugador 2
-        ][
-          set color red
-          set Jugador 1
-        ]
-        set size 0.9
-      ]
-    ]
-  ]
-  [
-    ask patches  with [pxcor = posx and pycor = posy ] [set value 0]
-    ask patches  with [pxcor = newposx and pycor = newposy ] [set value Jugador]
-    ifelse Jugador = 1[
-      set Jugador 2
-    ][
-      set Jugador 1
-    ]
-  ]
-  let casillas-alrededor possible-movements patch newposx newposy
-  foreach casillas-alrededor [c -> if (distancia (patch first c last c) patch newposx newposy = 1)[ ; para todas las casillas a distancia 1 de newpos
-    ask turtles with [pxcor = first c and pycor = last c ] [
-      ifelse Jugador = 1 [  ; cambiar color y value
-        set color red
-        set value 2
-      ]
-      [
-        set color blue
-        set value 1
-      ]
-    ]
-    ]
-  ]
-  report board-to-state
 end
 
 ; Move the result from the last state to the current one
@@ -159,268 +115,138 @@ end
 
 ;; ------------------------ Interface ---------------------------------------
 
+; crear el estado inicial con las 4 piezas del principio
+to-report inicial-state
+  let m [[1 0 0 0 0 0 2][0 0 0 0 0 0 0][0 0 0 0 0 0 0][0 0 0 0 0 0 0][0 0 0 0 0 0 0][0 0 0 0 0 0 0][2 0 0 0 0 0 1]]
+  report m
+end
+
+to-report test
+  let m [[1 1 1 1 2 2 2][1 1 1 1 1 1 1][2 2 2 2 2 2 2][2 2 2 2 2 1 1][1 1 1 2 2 1 1][1 1 1 1 1 1 1][2 1 1 1 1 1 1]]
+  report m
+end
+
+; cambiar el patch en pos px py a la color del jugador jug
+to change-patch-color [px py jug]
+  ask patches  with [pxcor = px and pycor = py] [
+    sprout-pieces 1 [
+      set shape "circle"
+      ifelse jug = 1 [
+        set color blue
+      ]
+      [
+        set color red
+      ]
+      set size 0.9
+    ]
+    set value jug
+  ]
+end
+
+to matrix-to-board [s]
+  ; foreach state [line -> foreach []]
+end
+
 ; Start procedure. Prepares the board
 to setup
   ca
+  ; parte grafica
   ask patches [
     set pcolor ifelse-value ((pxcor + pycor) mod 2 = 0) [white] [8999]
     set value 0
   ]
   set Jugador 1 ; Jugador blue
-                ;Setup pieces
-  ask patches  with [pxcor = 0 and pycor = 0] [
-    sprout-pieces 1 [
-      set shape "circle"
-      set color blue
-      set size 0.9
-    ]
-    set value 1
-  ]
-  ask patches  with [pxcor = 6 and pycor = 6] [
-    sprout-pieces 1 [
-      set shape "circle"
-      set color blue
-      set size 0.9
-    ]
-    set value 1
-  ]
-  ask patches  with [pxcor = 0 and pycor = 6] [
-    sprout-pieces 1 [
-      set shape "circle"
-      set color red
-      set size 0.9
-    ]
-    set value 2
-  ]
-  ask patches  with [pxcor = 6 and pycor = 0] [
-    sprout-pieces 1 [
-      set shape "circle"
-      set color red
-      set size 0.9
-    ]
-    set value 2
-  ]
-  set played? true
+  change-patch-color 0 0 1
+  change-patch-color 6 6 1
+  change-patch-color 0 6 2
+  change-patch-color 6 0 2
 
 end
 
-to play
-
-  let pieza nobody
-  let pos nobody
-  let newpos nobody
-  let lista 0
-  let casillas-disponibles 0
-  ; In the cycle, the human starts playing
-  ; Let's check if you click on a free piece
-  if (final-state board-to-state = 0)[
-    if mouse-down? [
-      if any? pieces-on patch mouse-xcor mouse-ycor and [value] of patch mouse-xcor mouse-ycor = Jugador [ ; si hay una pieza en el patch que pinchamos y pertenece al jugador que le toca mover
-        set pieza one-of pieces-on patch mouse-xcor mouse-ycor
-        set pos patch mouse-xcor mouse-ycor
-        set casillas-disponibles possible-movements  pos
-        while[mouse-down?][
-          ask pieza [setxy mouse-xcor mouse-ycor]
-        ]
-        set newpos patch mouse-xcor mouse-ycor
-        ask pieza[
-          ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles newpos) and [value] of patch mouse-xcor mouse-ycor = 0;( comprobar cor de mouse están en la lista de casillas disponibles y si esta basilla y mover la ficha en caso contrario regresarla a su origen)
-          [
-            move-to patch mouse-xcor mouse-ycor
-            set value Jugador
-            set newpos patch mouse-xcor mouse-ycor
-            ifelse ((distancia  pos newpos) = 1 )[ ; si la distancia de la nueva posición es mayor que 1 solo mueve la pieza si es 1 la duplica.
-              ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [
-                sprout-pieces 1 [
-                  set shape "circle"
-                  set value Jugador
-                  ifelse Jugador = 1[
-                    set color blue
-                    set Jugador 2
-                  ][
-                    set color red
-                    set Jugador 1
-                  ]
-                  set size 0.9
-                ]
-              ]
-            ][
-              ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [set value 0]
-              ask patches  with [pxcor = [pxcor] of newpos and pycor = [pycor] of newpos ] [set value Jugador]
-              ifelse Jugador = 1[
-                set Jugador 2
-              ][
-                set Jugador 1
-              ]
-            ]
-            let casillas-alrededor possible-movements newpos
-            foreach casillas-alrededor [c -> if (distancia (patch first c last c) newpos = 1)[ ; para todas las casillas a distancia 1 de newpos
-              ask turtles with [pxcor = first c and pycor = last c ] [
-                ifelse Jugador = 1 [  ; cambiar color y value
-                  set color red
-                  set value 2
-                ]
-                [
-                  set color blue
-                  set value 1
-                ]
-              ]
-              ]
-
-            ]
-
-          ]
-          [
-            move-to patch [pxcor] of pos  [pycor] of pos
-          ]
-        ]
-      ]
-    ]
-    stop
-  ]
-end
 
 to play-con-robot
 
-  let pieza nobody
-  let pos nobody
-  let newpos nobody
-  let lista 0
-  let casillas-disponibles 0
-  ; In the cycle, the human starts playing
-  ; Let's check if you click on a free piece
-  if (final-state board-to-state = 0)[
-    if mouse-down? [
-      if any? pieces-on patch mouse-xcor mouse-ycor and [value] of patch mouse-xcor mouse-ycor = Jugador [ ; si hay una pieza en el patch que pinchamos y pertenece al jugador que le toca mover
-        set pieza one-of pieces-on patch mouse-xcor mouse-ycor
-        set pos patch mouse-xcor mouse-ycor
-        set casillas-disponibles possible-movements  pos
-        while[mouse-down?][
-          ask pieza [setxy mouse-xcor mouse-ycor]
-        ]
-        set newpos patch mouse-xcor mouse-ycor
-        ask pieza[
-          ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles newpos) and [value] of patch mouse-xcor mouse-ycor = 0;( comprobar cor de mouse están en la lista de casillas disponibles y si esta basilla y mover la ficha en caso contrario regresarla a su origen)
-          [
-            move-to patch mouse-xcor mouse-ycor
-            set value Jugador
-            set newpos patch mouse-xcor mouse-ycor
-            ifelse ((distancia  pos newpos) = 1 )[ ; si la distancia de la nueva posición es mayor que 1 solo mueve la pieza si es 1 la duplica.
-              ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [
-                sprout-pieces 1 [
-                  set shape "circle"
-                  set value Jugador
-                  ifelse Jugador = 1[
-                    set color blue
-                    set Jugador 2
-                  ][
-                    set color red
-                    set Jugador 1
-                  ]
-                  set size 0.9
-                ]
-              ]
-            ][
-              ask patches  with [pxcor = [pxcor] of pos and pycor = [pycor] of pos ] [set value 0]
-              ask patches  with [pxcor = [pxcor] of newpos and pycor = [pycor] of newpos ] [set value Jugador]
-              ifelse Jugador = 1[
-                set Jugador 2
-              ][
-                set Jugador 1
-              ]
-            ]
-            let casillas-alrededor possible-movements newpos
-            foreach casillas-alrededor [c -> if (distancia (patch first c last c) newpos = 1)[ ; para todas las casillas a distancia 1 de newpos
-              ask turtles with [pxcor = first c and pycor = last c ] [
-                ifelse Jugador = 1 [  ; cambiar color y value
-                  set color red
-                  set value 2
-                ]
-                [
-                  set color blue
-                  set value 1
-                ]
-              ]
-              ]
-
-            ]
-
-          ]
-          [
-            move-to patch [pxcor] of pos  [pycor] of pos
-          ]
-        ]
-      ]
-      ; aqui juega la maquina
-      wait .1
-      let m MCTS:UCT (list (board-to-state) 2) Max_interations
-      ;stop
-    ]
-  ]
-  ;stop
 end
 
 
-to-report possible-movements [pos]
-  let x [pxcor] of pos
-  let y [pycor] of pos
-  let casillas-disponibles 0
-
-  set casillas-disponibles (list (list  (x - 1)  y) (list  (x - 2 )  y) (list  (x  + 1)  y) (list  (x  + 2)  y) (list  (x  - 1)  (y + 1) )
+to-report possible-movements [matrix px py]
+  let x px
+  let y py
+  let casillas-disponibles (list (list  (x - 1)  y) (list  (x - 2 )  y) (list  (x  + 1)  y) (list  (x  + 2)  y) (list  (x  - 1)  (y + 1) )
     (list  (x  - 1)  (y - 1) ) (list  (x  + 1)  (y - 1) ) (list  (x  + 1) (y + 1))(list  (x  + 2)  (y + 2)) (list  (x  + 2)  (y - 2)) (list  (x  - 2)  (y + 2)) (list  (x  - 2)  (y - 2))
     (list  x  (y - 2)) (list  x  (y - 1)) (list  x  (y + 1)) (list  x  (y + 2)))
 
+  set casillas-disponibles filter[s -> first s >= 0 and first s < 7 and last s >= 0 and last s < 7 ]casillas-disponibles
 
-  set casillas-disponibles filter[s -> first s >= 0 and first s < 7 and last s >= 0 and last s < 7]casillas-disponibles
-  report casillas-disponibles
+  let casillas-vacias (list)
+  foreach casillas-disponibles [s ->
+    ;show item (first s) matrix
+    ;show (item (last s) (item (first s) matrix))
+    if ((item (last s) (item (first s) matrix)) = 0) [
+      set casillas-vacias lput s casillas-vacias
+    ]
+  ]
+
+  report casillas-vacias
 end
 
-to-report movement-valid? [casillas-disponibles newpos]
-  let p (list ([pxcor] of newpos) ([pycor] of newpos))
+to-report movement-valid? [casillas-disponibles newposx newposy]
+  let p (list (newposx) (newposy))
   foreach casillas-disponibles [c -> if (p = c)[report true]]
   report false
 
 end
 
-to-report distancia [pos newpos]
-  let res 0
-  set res max(list (abs([pxcor] of newpos - [pxcor] of pos)) (abs([pycor] of newpos - [pycor] of pos)))
+to-report distancia [posx posy newposx newposy]
+  let res max(list (abs(newposx - posx)) (abs(newposy - posy)))
   report  res
 end
 
-to-report final-state [content]
+to-report final-state [estado]
+  let matrix first estado
+  let jug last estado
+  let jugador-que-va-a-jugar 1
   let fichas1 0
   let fichas2 0
 
-  ;comprobamos si hay movimientos posibles del jugador que esta jugando  y si hay, seguimos jugando
-  ; miramos en cada posicion de la lista del tablero cuyo valor es 0-1-2 , solo en las que pertenecen al jugador que esta jugando y ademas si es vacío el numero de casillas posibles
-  ;a las que el jugador se puede mover (posiblle movements) y cuyo valor es vacío(filter(se nos olvidó poner la comprobacion de si es vacía en la funcion y por eso se ha hecho el filter aquí))
-  ;foreach posiciones-tablero [i -> if (item i content = Jugador) and ((empty?  filter [s -> [value] of patch (first s) (last s) = 0] possible-movements patch  (i / 7)  (i mod 7)) = false)[ report false]]
-  let empty true
-  ask patches with [value = Jugador][  ; por todos los piezas del jugador que esta jugando
-    if ( empty? filter [s -> [value] of patch first s last s = 0] possible-movements patch pxcor pycor = false ) ; si puede mover unas de sus piezas
+  if jug = 1[set jugador-que-va-a-jugar 2]
+
+  let filas 0
+  let columnas 0
+
+  foreach matrix [i -> foreach i [j -> if (j = jugador-que-va-a-jugar) [ifelse (not empty? possible-movements matrix filas columnas) [report false][ show "bueno"]] set columnas (columnas + 1)] set columnas 0 set filas (filas + 1)]
+  ;hasta aqui funciona
+
+
+  show "lkjh"
+  foreach matrix [i ->
+    foreach i [
+      j ->
+      show (item i matrix)
+      show item j (item i matrix)
+      if (item j (item i matrix) = 1)
+      [
+        set fichas1 ( fichas1 + 1 )
+      ]
+      if (item j (item i matrix) = 2)
+      [
+        set fichas2 ( fichas2 + 1 )
+      ]
+      set columnas (columnas + 1)
+    ]
+    set filas (filas + 1) set columnas 0 ] ; contamos las fichas de los jugadores
+
+  ifelse (fichas1 + fichas2 = 49)[
+    ifelse (fichas1 > fichas2)[
+      report 1 ; jugador 1 es el ganador
+    ]
     [
-      set empty false  ; set empty a false
+      report 2  ; jugador 2 es el ganador
     ]
   ]
-  if empty = false [report 0]  ; si empty es false, es decir que el jugador puede hacer un movimento y que entonces la partida puede seguir
-
-  ;si llegamos aqui es porque no hay movimientos posibles, entonces comprobamos si es porque el tablero esta lleno en cuyo caso procedemos a contar el numero de fichas de cada jugador
-  set fichas1 count patches with [value = 1]
-  set fichas2 count patches with [value = 2]
-  ifelse(fichas1 + fichas2 = 49)[
-    ifelse (fichas1 > fichas2)[
-      user-message "Jugador-1 ha ganado y Jugador-2 paga un kebab al creador del juego"
-      report 2
-    ]
-    [
-      user-message "Jugador-2 ha ganado y Jugador-1 paga 50 cervezas al creador del juego"
-      report 1
-    ]
-  ] ;por ultimo si llegamos aqui es porque no hay movimientos posibles pero el tablero no esta completo, por lo que tenemos que ver qué jugador no puede realizar ningun movimiento ya que será el perdedor.
+  ;si el tablero no esta completo
   [
-    user-message   word "Jugador-" word Jugador " ha perdido"
-    report Jugador ; que ha perdido
+    report jug ; el que ha ganado
   ]
 
 end
@@ -482,6 +308,23 @@ BUTTON
 113
 2 Jugadores
 play
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+29
+131
+129
+164
+1 Jugador
+play-con-robot
 T
 1
 T
