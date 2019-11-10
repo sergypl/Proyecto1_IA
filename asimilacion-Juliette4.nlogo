@@ -198,12 +198,13 @@ to setup
   change-patch-color 6 6 1
   change-patch-color 0 6 2
   change-patch-color 6 0 2
-
+  set played? false
 end
 
 to cambiar-colores-alrededor [px py jug]
   let x px
   let y py
+
   let casillas-alrededor (list (list  (x - 1)  y) (list  (x - 2 )  y) (list  (x  + 1)  y) (list  (x  + 2)  y) (list  (x  - 1)  (y + 1) )
     (list  (x  - 1)  (y - 1) ) (list  (x  + 1)  (y - 1) ) (list  (x  + 1) (y + 1))(list  (x  + 2)  (y + 2)) (list  (x  + 2)  (y - 2)) (list  (x  - 2)  (y + 2)) (list  (x  - 2)  (y - 2))
     (list  x  (y - 2)) (list  x  (y - 1)) (list  x  (y + 1)) (list  x  (y + 2)))
@@ -226,7 +227,6 @@ to cambiar-colores-alrededor [px py jug]
 end
 
 to play-con-robot
-  ; let played? false
   let pieza nobody
   let oldpos nobody
   let newpos nobody
@@ -240,7 +240,7 @@ to play-con-robot
       ;asignamos a la variable oldpos las coordenadas donde el jugador a pinchado
       set oldpos patch mouse-xcor mouse-ycor
       ;almacenamos en casillas-disponibles los posibles movimientos que puede hacer con esa ficha
-      set casillas-disponibles possible-movements board-to-state [pxcor] of oldpos [pycor] of oldpos
+      set casillas-disponibles possible-movements board-to-state (6 - [pycor] of oldpos) [pxcor] of oldpos
       ;mientras el raton este pulsado arrastra la pieza con el
       while[mouse-down?][
         ask pieza [setxy mouse-xcor mouse-ycor]
@@ -248,13 +248,13 @@ to play-con-robot
       ;una vez ha soltado el la pieza almacenamos las coordenadas de donde la haya soltado en newpos
       set newpos patch mouse-xcor mouse-ycor
       ask pieza[;comprobar cor de mouse están en la lista de casillas disponibles y si esta vacía, mover la ficha. En caso contrario regresarla a su origen
-        ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles [pxcor] of newpos [pycor] of newpos)
+        ifelse (not any? other pieces-on patch mouse-xcor mouse-ycor) and (movement-valid? casillas-disponibles (6 - [pycor] of newpos) [pxcor] of newpos)
         [ ;en caso de que se cumpla todo lo anterior movemos la ficha a la nueva posicion
           move-to patch mouse-xcor mouse-ycor
           ;cambiamos el valor del patch por el del jugador
           set value 1
           ;y en la variable newpos almacenamos el valor de la nueva posicion
-          set newpos patch mouse-xcor mouse-ycor
+          ;set newpos patch mouse-xcor mouse-ycor
           ;si la distancia de la nueva posición es mayor que 1, solo mueve la pieza. Si es igual a 1 la duplica.
           ifelse ((distancia  [pxcor] of oldpos [pycor] of oldpos [pxcor] of newpos [pycor] of newpos) = 1 )[
             ;creamos la pieza en la antigua posicion porque a la nueva ya la hemos movido
@@ -263,6 +263,8 @@ to play-con-robot
             ask patches  with [pxcor = [pxcor] of oldpos and pycor = [pycor] of oldpos ] [set value 0]
           ];cambiamos el color de las piezas que estan a distancia 1 de newpos
           cambiar-colores-alrededor [pxcor] of newpos [pycor] of newpos 1
+          ;cambiamos el jugador para el turno de la maquina
+          set played? true
         ][;movemos la ficha a la posicion inicial
           move-to patch [pxcor] of oldpos  [pycor] of oldpos
         ]
@@ -275,6 +277,34 @@ to play-con-robot
       user-message "You win!!!"
       stop
     ]
+  ] ;si es el turno de la maquina hacemos las llamadas necesarias para que juegue
+  if played? [
+    ;lets take the move from the MCTS algorithm
+    let m MCTS:UCT (list (board-to-state) 1) Max_iterations
+    ;recuperamos las posiciones de m [oldposy oldposx newposy newposx] matrix (x,y)
+    let oldposy ( 6 - (item 0 m))
+    let oldposx item 1 m
+    let newposy ( 6 - (item 2 m))
+    let newposx item 3 m
+    ; cambiamos el tablero
+    ifelse ((distancia  oldposx oldposy newposx newposy) = 1 )[
+      ;creamos la pieza en la antigua posicion porque a la nueva ya la hemos movido
+      change-patch-color newposy newposx 2
+    ]
+    [;si la distancia es 2, movemos la ficha a la nueva posicion, actualizamos el valor de los patches tanto el de newpos con el valor 2 como el patch de oldpos con 0
+      ask patches with [pxcor = oldposx and pycor = oldposy ] [set value 0]
+      ask pieces  with [pxcor = oldposx and pycor = oldposy ] [
+        move-to patch newposx newposy
+      ]
+      ask patches with [pxcor = newposx and pycor = newposy ] [set value 2]
+    ];cambiamos el color de las piezas que estan a distancia 1 de newpos
+    cambiar-colores-alrededor newposx newposy 2
+    ; comprabamos si la maquina ha ganado
+    if MCTS:get-result (list (board-to-state) 2) 2 = 2 [
+      user-message "I win!!!"
+      stop
+    ]
+    set played? false
   ]
 end
 
@@ -289,18 +319,19 @@ to-report possible-movements [matrix px py]
   set casillas-disponibles filter[s -> first s >= 0 and first s < 7 and last s >= 0 and last s < 7 ]casillas-disponibles
 
   let casillas-vacias (list)
-  foreach casillas-disponibles [s ->
-    if ((item (last s) (item (first s) matrix)) = 0) [
-      set casillas-vacias lput s casillas-vacias
+  foreach casillas-disponibles [p ->
+    if ((item (last p) (item (first p) matrix)) = 0) [
+      set casillas-vacias lput p casillas-vacias
     ]
   ]
-
   report casillas-vacias
 end
 
 to-report movement-valid? [casillas-disponibles newposx newposy]
   let p (list (newposx) (newposy))
+
   foreach casillas-disponibles [c -> if (p = c)[report true]]
+
   report false
 
 end
