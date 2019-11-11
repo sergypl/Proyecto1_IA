@@ -88,7 +88,7 @@ to-report MCTS:apply [r s]
   report MCTS:create-state content (3 - jug)
 end
 
-; Move the result from the last state to the current one
+;Mover el resultado del ultimo estado al estado actual
 to-report MCTS:get-result [s p]
   if final-state s = 1[
     report 1
