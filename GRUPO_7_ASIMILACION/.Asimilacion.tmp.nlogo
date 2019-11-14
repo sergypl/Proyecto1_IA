@@ -94,7 +94,7 @@ to-report MCTS:get-result [s p]
     report 1
   ]
   if final-state s = 2[
-    report 0
+    report
   ]
   report false
 end
@@ -187,7 +187,7 @@ to play-con-robot
       user-message "You win!!!"
       stop
     ]
-    if MCTS:get-result (list (board-to-state) 1) 2 = 0 [
+    if MCTS:get-result (list (board-to-state) 1) 2 = 2 [
       user-message "I win!!!"
       stop
     ]
@@ -214,7 +214,7 @@ to play-con-robot
     ]
     cambiar-colores-alrededor newposx newposy 2  ;cambiamos el color de las piezas que estan a distancia 1 de newpos
     ; comprobamos si la maquina ha ganado
-    if MCTS:get-result (list (board-to-state) 2) 2 = 0 [
+    if MCTS:get-result (list (board-to-state) 2) 2 = 2 [
       user-message "I win!!!"
       stop
     ]
@@ -481,7 +481,7 @@ Max_iterations
 Max_iterations
 0
 3000
-50.0
+200.0
 50
 1
 NIL
