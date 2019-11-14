@@ -2,7 +2,7 @@ __includes ["MCTS.nls"]
 
 extensions [matrix]
 
-; Pieces of the game
+; Piezas del juego
 breed [pieces piece]
 
 globals[
@@ -21,7 +21,7 @@ globals[
 ;    42  43  44  45  46  47  48
 
 
-; Create  the world with 7x7 patches and draws the board
+; Crear el mundo con  7x7 patches and dibujar el tablero
 patches-own[
   value    ;para almacenar (0/1/2)  // 0 --> celda vacía //1 --> pieza jugador 1 (azul) 1// 2 --> pieza jugador 2 (rojo)
 ]
@@ -40,23 +40,23 @@ patches-own[
 
 
 ;; ------------------------ Monte Carlo ---------------------------------------
-; Get the content of the state
+; Conseguir el contenido del estado
 to-report MCTS:get-content [s]
   report first s
 end
 
-; Get the player that generates the state
+; Conseguir el jugador que genera el estado
 to-report MCTS:get-playerJustMoved [s]
   report last s
 end
 
-; Create a state from the content and player
+; Crear un estado a partir de un contenido y un jugador
 to-report MCTS:create-state [c p]
   report (list c p)
 end
 
 
-; Get the rules applicable to the state
+;Conseguir las reglas aplicables al estado
 to-report MCTS:get-rules [s]
   let lista (list)
   let matrix first s
@@ -496,42 +496,59 @@ NIL
 NIL
 1
 
+MONITOR
+549
+71
+721
+116
+Action..
+(word \"Thinking: \" (count MCTSnodes) \" ...\")
+17
+1
+11
+
 @#$#@#$#@
-## WHAT IS IT?
+##  ¿QUÉ ES? - WHAT IS IT?
 
-(a general understanding of what the model is trying to show or explain)
+Una demostración del algoritmo Monte Carlo Tree Search aplicado al juego  **Asimilación** en el que un humano juega contra la máquina (**1 Jugador**). Y por otro lado un modo de juego para 2 humanos (**2 Jugadores**). 
 
-## HOW IT WORKS
+La siguiente información ha sido extraida de [Asimilación](https://brainking.com/es/GameRules?tp=89)
 
-(what rules the agents use to create the overall behavior of the model)
+## ORIGEN E HISTORIA - ORIGIN AND HISTORY
 
-## HOW TO USE IT
+**Asimilación** (un clon del Ataxx, también conocido como SlimeWars y Frog Cloning) es un juego de tablero que apareció por vez primera en 1990 en versión video juego por la Corporación Leland. Según fuentes de internet, el juego fue ideado por Dave Crummack y Craig Galley en 1988 y se denominó Infección.
 
-(how to use the model, including a description of each of the items in the Interface tab)
+## DESCRIPCIÓN - DESCRIPTION
 
-## THINGS TO NOTICE
+Este es un juego el cual se juega en un tablero cuadrado dividido en 49 cuadrados(7X7) en el que 2 jugadores se enfrentan entre sí. Se utilizan 2 tipos de piezas, un tipo (piezas de color **azul**) pertenecientes al jugador nº 1 y el otro tipo (piezas de color **rojo**) pertenecientes al jugador 2.	 
 
-(suggested things for the user to notice while running the model)
 
-## THINGS TO TRY
+## OBJETIVO - GOAL
+El objetivo del juego para cada jugador es que  el adversario no pueda realizar ningun movimiento legal.Cuando esto ocurre, el jugador que no puede realizar un movimiento es el perdedor. 
 
-(suggested things for the user to try to do (move sliders, switches, etc.) with the model)
+## DESARROLLO - DEVELOPMENT
+Cada jugador mueve una ficha por turno. Una ficha puede ser movida una o dos casillas en cualquier dirección horizontal, vertical o diagonalmente a una casilla vacía. Hay diferencias en cuanto al movimiento de la ficha a una o dos casillas de distancia :
 
-## EXTENDING THE MODEL
+1. Movimiento de **una** casilla: La ficha se duplica en la nueva casilla.
 
-(suggested things to add or change in the Code tab to make the model more complicated, detailed, accurate, etc.)
+2. Movimiento de **dos** casillas: La ficha se mueve a la nueva casilla.
 
-## NETLOGO FEATURES
+Al comienzo del juego cada jugador posee dos fichas. Cada una de ellas en los extremos de una diagonal del tablero, diferente al del oponente.
 
-(interesting or unusual features of NetLogo that the model uses, particularly in the Code tab; or where workarounds were needed for missing features)
 
-## RELATED MODELS
+## FINAL
 
-(models in the NetLogo Models Library and elsewhere which are of related interest)
+Si las 49 casillas del tablero han sido completadas con fichas de los jugadores, el ganador será el jugador con mas fichas sobre él.
 
-## CREDITS AND REFERENCES
 
-(a reference to the model's URL on the web if it has one, as well as any other necessary credits, citations, and links)
+## CREDITOS Y REFERENCIAS - CREDITS AND REFERENCES
+
+Model created by: **Juliette Philibert, Sergio Pérez López, Enrique Piedra Venegas**
+
+La biblioteca usada para el algoritmo de Monte Carlo: MCTS.nls 
+
+MCTS.nls creada por:[Fernando Sancho Caparrini](https://www.cs.us.es/~fsancho/)
+La biblioteca se puede encontrar en: [IA Github Repository](https://github.com/fsancho/IA/tree/master/05.%20Adversarial%20Search)
 @#$#@#$#@
 default
 true
